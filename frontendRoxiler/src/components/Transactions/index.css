@@ -11,17 +11,23 @@ table {
 th {
   font-size: 20px;
   font-weight: bold;
+  font-family: "Roboto";
 }
 
 td,
 th {
-  border: 1px solid #000;
+  border: 2px solid #000000;
   padding: 8px;
 }
 
+.no-transactions {
+  color: #000000;
+  font-size: 24px;
+  font-weight: 500;
+}
 .product-img {
-  height: 100px;
-  width: 100px;
+  height: 80px;
+  width: 80px;
 }
 
 .pagination-container {

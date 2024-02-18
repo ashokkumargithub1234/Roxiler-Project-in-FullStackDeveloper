@@ -1,40 +1,18 @@
-.table-container {
-  font-family: roboto;
-  font-size: 16px;
-}
-
-table {
-  border-collapse: collapse;
-  background-color: #f8df8c;
-}
-
-th {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-td,
-th {
-  border: 1px solid #000;
-  padding: 8px;
-}
-
-.product-img {
-  height: 100px;
-  width: 100px;
-}
-
-.pagination-container {
-  margin-top: 10px;
-  margin-bottom: 10px;
+.statistics-container {
+  width: 50%;
+  margin: 48px 16px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
+}
+.statistics-header-container {
+  display: flex;
   align-items: center;
 }
-
-.pagination-container button {
-  background-color: transparent;
-  border: none;
-  outline: none;
-  cursor: pointer;
+.statistics-header {
+  font-size: 36px;
+  font-weight: bold;
+  font-family: "Roboto";
+  color: #000000;
+  margin-right: 32px;
 }

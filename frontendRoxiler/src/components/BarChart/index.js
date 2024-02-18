@@ -2,16 +2,32 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 
 import "./index.css";
 
-const BarChartComponent = (props) => {
-  const { barChartData, selectMonth } = props;
+const BarChartTask = (props) => {
+  const { barChartData, selectMonth, months, changeMonth } = props;
+  const changeMonthText = (event) => {
+    changeMonth(event);
+  };
+
   return (
-    <div className="barchart-container">
-      <h1>
-        Bar Chart Stats -{" "}
-        {selectMonth.displayText === "Select Month"
-          ? "Overall"
-          : selectMonth.displayText}
-      </h1>
+    <div className="barChart-container">
+      <div className="barChart-header-container">
+        <h1 className="barChart-header">Bar Chart Stats - </h1>
+        <select
+          value={selectMonth}
+          onChange={changeMonthText}
+          className="select-month"
+        >
+          {months.map((eachMonth) => (
+            <option
+              key={eachMonth.value}
+              value={eachMonth.value}
+              className="checked-text"
+            >
+              {eachMonth.displayText}
+            </option>
+          ))}
+        </select>
+      </div>
       <BarChart
         width={900}
         height={400}
@@ -29,4 +45,4 @@ const BarChartComponent = (props) => {
   );
 };
 
-export default BarChartComponent;
+export default BarChartTask;

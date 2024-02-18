@@ -1,17 +1,32 @@
 import "./index.css";
 
 const Statistics = (props) => {
-  const { statisticsDetails, selectMonth } = props;
+  const { statisticsDetails, selectMonth, months, changeMonth } = props;
   const { totalSaleAmount, soldItems, notSoldItems } = statisticsDetails;
+  const changeMonthText = (event) => {
+    changeMonth(event);
+  };
   return (
     <div className="statistics-container">
-      <h1>
-        Statistics -{" "}
-        {selectMonth.displayText === "Select Month"
-          ? "Overall"
-          : selectMonth.displayText}
-      </h1>
-      <table className="statistics-table">
+      <div className="statistics-header-container">
+        <h1 className="statistics-header">Statistics - </h1>
+        <select
+          value={selectMonth}
+          onChange={changeMonthText}
+          className="select-month"
+        >
+          {months.map((eachMonth) => (
+            <option
+              key={eachMonth.value}
+              value={eachMonth.value}
+              className="checked-text"
+            >
+              {eachMonth.displayText}
+            </option>
+          ))}
+        </select>
+      </div>
+      <table>
         <tbody>
           <tr>
             <td>Total sale</td>

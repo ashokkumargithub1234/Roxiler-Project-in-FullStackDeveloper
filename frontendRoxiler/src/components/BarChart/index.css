@@ -1,11 +1,20 @@
-.barchart-container {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  font-family: roboto;
-  font-size: 16px;
+.barChart-container {
+  width: 90%;
+  margin: 48px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-
-.barchart-container h1 {
-  font-size: 28px;
-  margin-bottom: 10px;
+.barChart-header-container {
+  display: flex;
+  align-items: center;
+  width: 80%;
+  margin-left: 36px;
+}
+.barChart-header {
+  font-size: 36px;
+  font-weight: bold;
+  font-family: "Roboto";
+  color: #000000;
+  margin-right: 32px;
 }

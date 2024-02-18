@@ -1,8 +1,8 @@
 import "./index.css";
 
 const Transactions = (props) => {
-  const { transactionsDetails, page, increment, decrement } = props;
-  const { transactions, total } = transactionsDetails;
+  const { listTransactions, page, increment, decrement } = props;
+  const { transactions, total } = listTransactions;
   const incrementPage = () => {
     increment();
   };
@@ -67,7 +67,7 @@ const Transactions = (props) => {
   const renderNoData = () => {
     return (
       <div>
-        <h1>No Transactions</h1>
+        <h1 className="no-transactions">No Transactions</h1>
       </div>
     );
   };

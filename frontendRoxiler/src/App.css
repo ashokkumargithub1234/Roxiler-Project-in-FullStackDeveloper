@@ -1,14 +1,55 @@
-.App {
-  background-color: #edf6f6;
+.project-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-height: 100vh;
+  padding: 16px;
+}
+
+.loader-container {
+  height: 90vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.failure-container {
+  height: 80vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 20px 180px;
+}
+.failure-text {
+  font-family: "Roboto";
+  color: black;
+  font-size: 32px;
+  font-weight: 500;
+}
+.failure-button {
+  font-family: "Roboto";
+  color: black;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1.5;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 12px;
+  background-color: aqua;
+  border-radius: 5px;
 }
 
-.heading-container {
+.transaction-container {
+  width: 80%;
+  background-color: rgb(146, 207, 231);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.header-container {
   background-color: #ffffff;
   border-radius: 50%;
   height: 200px;
@@ -19,8 +60,9 @@
   align-items: center;
 }
 
-.heading-container h1 {
-  font-family: roboto;
+.header-text {
+  font-family: "Roboto";
+  font-weight: bold;
   color: #404040;
   font-size: 32px;
 }
@@ -29,37 +71,32 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+  width: 90%;
   margin-top: 20px;
   margin-bottom: 20px;
 }
 
-.filter-container input {
-  font-family: roboto;
+.input-search {
+  font-family: "Roboto";
   background-color: #f8df8c;
-  color: #000;
-  font-size: 18px;
-  padding: 8px 18px;
-  border-radius: 8px;
-  outline: none;
-  border: none;
-}
-
-.filter-container input::placeholder {
   color: #474642;
+  font-size: 18px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  outline: none;
+  border: none;
 }
 
-.filter-container select {
-  font-family: roboto;
-  background-color: #ebb840;
+.select-month {
+  font-family: "Roboto";
   font-size: 18px;
+  background-color: #ebb840;
   border-radius: 8px;
   padding: 8px 18px;
   outline: none;
   border: none;
 }
-
-select option:checked {
+.checked-text {
   background-color: #f8df8c;
 }
 
@@ -72,12 +109,12 @@ select option:checked {
 }
 
 .view-container h1 {
-  font-family: roboto;
+  font-family: "Roboto";
   color: #404040;
 }
 
 .view-container button {
-  font-family: roboto;
+  font-family: "Roboto";
   color: #fff;
   font-size: 18px;
   margin: 20px;

@@ -1,11 +1,20 @@
-.piechart-container {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  font-family: roboto;
-  font-size: 16px;
+.pieChart-container {
+  width: 70%;
+  margin: 48px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
-
-.piechart-container h1 {
-  font-size: 28px;
-  margin-bottom: 10px;
+.pieChart-header-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.pieChart-header {
+  font-size: 36px;
+  font-weight: bold;
+  font-family: "Roboto";
+  color: #000000;
+  margin-right: 32px;
 }
