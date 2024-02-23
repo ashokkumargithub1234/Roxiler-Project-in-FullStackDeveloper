@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const databasePath = path.join(__dirname, "RoxilerTransaction.db");
+const databasePath = path.join(__dirname, "productsTransaction.db");
 
 let database = null;
 
@@ -33,8 +33,8 @@ initializeDbAndServer();
 
 const createTable = async () => {
   const createQuery = `
-    CREATE TABLE  IF NOT EXISTS ProductData(
-        id INTEGER ,
+    CREATE TABLE IF NOT EXISTS transactions(
+        id TEXT ,
         title TEXT,
         price TEXT,
         description TEXT,
@@ -47,51 +47,80 @@ const createTable = async () => {
   await database.run(createQuery);
 };
 
-const getInitializedDatabase = async () => {
-  const url = "https://s3.amazonaws.com/roxiler.com/product_transaction.json";
-  const responseData = await axios.get(url);
-  const transactionData = await responseData.data;
-  for (const productData of transactionData) {
-    const insertQuery = `INSERT INTO ProductData(id,title,price,description,category,image,sold,dateOfSale)
-        VALUES(?,?,?,?,?,?,?,?);`;
+const fetchAndInsert = async () => {
+  const response = await axios.get(
+    "https://s3.amazonaws.com/roxiler.com/product_transaction.json"
+  );
+  const data = response.data;
 
-    await database.run(insertQuery, [
-      productData.id,
-      productData.title,
-      productData.price,
-      productData.description,
-      productData.category,
-      productData.image,
-      productData.sold,
-      productData.dateOfSale,
-    ]);
+  for (let item of data) {
+    const queryData = `SELECT id FROM transactions WHERE id = ${item.id}`;
+    const existingData = await database.get(queryData);
+    if (existingData === undefined) {
+      const query = `
+   INSERT INTO transactions (id, title, price, description, category, image, sold, dateOfSale) 
+   VALUES (
+       ${item.id},
+       '${item.title.replace(/'/g, "''")}',
+       ${item.price},
+       '${item.description.replace(/'/g, "''")}',
+       '${item.category.replace(/'/g, "''")}',
+       '${item.image.replace(/'/g, "''")}',
+       ${item.sold},
+       '${item.dateOfSale.replace(/'/g, "''")}'
+   );
+`; /*The .replace(/'/g, "''") in the SQL query helps prevent SQL injection attacks by escaping single quotes.*/
+
+      await database.run(query);
+    }
   }
-
-  return { msg: "Initialize database successfuly" };
+  console.log("Transactions added");
+  return "Transactions added";
 };
 
 app.get("/initialize-database", async (request, response) => {
-  const initializedDatabase = await getInitializedDatabase();
+  const initializedDatabase = await fetchAndInsert();
   response.send(initializedDatabase);
 });
 
 /* -----------------------CRUD OPERATIONS------------------------------*/
-
-app.get("/get-product/:productId", async (request, response) => {
-  const { productId } = request.params;
-  const product = `
-    select 
-        * 
-    from 
-        ProductData 
-     where 
-        id = ${productId};
-        `;
-  const productData = await database.get(product);
+app.get("/get-product/:id", async (request, response) => {
+  const { id } = request.params;
+  const productData = await database.get(`
+        SELECT
+            *
+        FROM 
+            transactions 
+        WHERE 
+            id = ${id};
+    `);
   response.send(productData);
 });
 
-const postNewProductData = async (
+const deleteProductData = async (deleteId) => {
+  // console.log(typeof productId);
+  if (deleteId === "") {
+    return "Product Not Found";
+  }
+  const productData = await database.run(`
+    DELETE FROM
+      transactions
+    WHERE
+      id = ${deleteId};`);
+
+  return {
+    msg: `ID ${deleteId} Product Deleted Successfully`,
+  };
+};
+
+app.delete("/products/:deleteId/", async (request, response) => {
+  const { deleteId } = request.params;
+  const deleteProduct = await deleteProductData(deleteId);
+
+  response.send(deleteProduct);
+});
+
+const modifyProductData = async (
   id,
   title,
   price,
@@ -101,12 +130,42 @@ const postNewProductData = async (
   sold,
   dateOfSale
 ) => {
-  const newProductData = await database.run(`
-   INSERT INTO ProductData(id,title,price,description,category,image,sold,dateOfSale) 
-    VALUES (${id}, '${title}', '${price}', 
-    '${description}','${category}','${image}',${sold},'${dateOfSale}')
+  const queryData = `SELECT id FROM transactions WHERE id = ${id}`;
+  const findData = await database.get(queryData);
+  // console.log(findData);
+  if (findData === undefined) {
+    const newProductData = await database.run(`
+   INSERT INTO transactions(id,title,price,description,category,image,sold,dateOfSale) 
+    VALUES (
+       ${id},
+       '${title.replace(/'/g, "''")}',
+       ${price},
+       '${description.replace(/'/g, "''")}',
+       '${category.replace(/'/g, "''")}',
+       '${image.replace(/'/g, "''")}',
+       ${sold},
+       '${dateOfSale.replace(/'/g, "''")}'
+   )
     ;`);
-  return { msg: `id = ${id} NewProductAdded` };
+    return { msg: `id = ${id} New Product Added` };
+  } else if (findData !== undefined) {
+    const newProductData = await database.run(`
+   UPDATE 
+        transactions 
+   SET 
+   title = '${title.replace(/'/g, "''")}',
+   price = '${price}',
+   description = '${description.replace(/'/g, "''")}',
+   category = '${category.replace(/'/g, "''")}',
+   image = '${image.replace(/'/g, "''")}',
+   sold = ${sold},
+   dateOfSale = '${dateOfSale.replace(/'/g, "''")}'
+   
+     WHERE 
+    id = ${id}
+    ;`);
+    return { msg: `ProductID = ${id} ProductUpdatedSuccessfully` };
+  }
 };
 
 app.post("/add-product-data/", async (request, response) => {
@@ -120,7 +179,7 @@ app.post("/add-product-data/", async (request, response) => {
     sold,
     dateOfSale,
   } = request.body;
-  const addPostData = await postNewProductData(
+  const addPostData = await modifyProductData(
     id,
     title,
     price,
@@ -133,40 +192,9 @@ app.post("/add-product-data/", async (request, response) => {
   response.send(addPostData);
 });
 
-const updateProduct = async (
-  productId,
-  id,
-  title,
-  price,
-  description,
-  category,
-  image,
-  sold,
-  dateOfSale
-) => {
-  const newProductData = await database.run(`
-   UPDATE 
-        ProductData 
-   SET 
-   id = ${id},
-   price = '${price}',
-   description = '${description}',
-   title = '${title}',
-   category = '${category}',
-   image = '${image}',
-   sold = ${sold},
-   dateOfSale = '${dateOfSale}'
-   
-     WHERE 
-    id = ${productId}
-    ;`);
-  return { msg: `ProductID = ${productId} ProductUpdatedSuccessfully` };
-};
-
-app.put("/update-product/:productId", async (request, response) => {
-  const { productId } = request.params;
+app.put("/update-product/:id", async (request, response) => {
+  const { id } = request.params;
   const {
-    id,
     title,
     price,
     description,
@@ -175,8 +203,7 @@ app.put("/update-product/:productId", async (request, response) => {
     sold,
     dateOfSale,
   } = request.body;
-  const updatedProduct = await updateProduct(
-    productId,
+  const updatedProduct = await modifyProductData(
     id,
     title,
     price,
@@ -189,48 +216,70 @@ app.put("/update-product/:productId", async (request, response) => {
   response.send(updatedProduct);
 });
 
-const deleteProductData = async (productId) => {
-  const deleteProductId = await database.run(`
-    DELETE FROM
-      ProductData
-    WHERE
-      id = ${productId};`);
-  return { msg: `ProductID = ${productId} Product Deleted Successfully` };
-};
-
-app.delete("/products/:productId/", async (request, response) => {
-  const { productId } = request.params;
-  const deleteProduct = await deleteProductData(productId);
-
-  response.send(deleteProduct);
-});
-
 /*---------------------------------------------------------------------*/
 
 const getAllTransactions = async (limit, offset, searchText, selectedMonth) => {
   // console.log(selectedMonth);
-  const monthValue = format(new Date(selectedMonth), "MM");
-
-  const getTodoQuery = `
+  let getTodoQuery;
+  let totalSearchedItems;
+  if (selectedMonth === "" && searchText === "") {
+    getTodoQuery = `
      SELECT
       *
     FROM
-      ProductData
-    WHERE
-      (title LIKE '%${searchText}%' OR description LIKE '%${searchText}%' OR price LIKE '%${searchText}%')
-      AND dateOfSale LIKE '%-${monthValue}-%'
-      LIMIT ${limit} OFFSET ${offset}
+      transactions
+    
+        LIMIT ${limit} OFFSET ${offset}
       `;
-
-  const totalSearchedItems = `
-     SELECT
+    totalSearchedItems = `
+      SELECT
       count(id) as total
     FROM
-      ProductData
+      transactions
+   
+      `;
+  } else if (selectedMonth === "" && searchText !== "") {
+    getTodoQuery = `
+     SELECT
+      *
+    FROM
+      transactions
+    WHERE
+      (title LIKE '%${searchText}%' OR description LIKE '%${searchText}%' OR price LIKE '%${searchText}%')
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    totalSearchedItems = `
+      SELECT
+      count(id) as total
+    FROM
+      transactions
+    WHERE
+      (title LIKE '%${searchText}%' OR description LIKE '%${searchText}%' OR price LIKE '%${searchText}%')
+      `;
+  } else {
+    const monthValue = format(new Date(selectedMonth), "MM");
+
+    getTodoQuery = `
+     SELECT
+      *
+    FROM
+      transactions
+    WHERE
+      (title LIKE '%${searchText}%' OR description LIKE '%${searchText}%' OR price LIKE '%${searchText}%')
+      AND dateOfSale LIKE '%-${monthValue}-%'      
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    totalSearchedItems = `
+      SELECT
+      count(id) as total
+    FROM
+      transactions
     WHERE
       (title LIKE '%${searchText}%' OR description LIKE '%${searchText}%' OR price LIKE '%${searchText}%')
       AND dateOfSale LIKE '%-${monthValue}-%' 
       `;
+  }
+
   const todoQuery = await database.all(getTodoQuery);
   const totalItems = await database.get(totalSearchedItems);
   return { transactionsData: todoQuery, totalItems };
@@ -238,40 +287,66 @@ const getAllTransactions = async (limit, offset, searchText, selectedMonth) => {
 
 const getStatistics = async (selectedMonth) => {
   let statistics = [];
-  const monthValue = format(new Date(selectedMonth), "MM");
+  let totalSaleAmt;
+  let totalSoldItems;
+  let totalUnsoldItems;
 
-  const total_sale_amt = `
+  if (selectedMonth === "") {
+    totalSaleAmt = `
     SELECT 
     SUM(price) AS total_sale_amt
-    FROM ProductData 
-    WHERE dateOfSale LIKE '%-${monthValue}-%' and sold = 1;`;
-  const saleResponseResult = await database.all(total_sale_amt);
-  statistics.push(saleResponseResult);
+    FROM transactions 
+    WHERE sold = 1;`;
 
-  const total_sold_items = `
+    totalSoldItems = `
     SELECT COUNT()AS Total_sold_items
         FROM 
-    ProductData 
+    transactions 
+        WHERE 
+    sold = 1;`;
+
+    totalUnsoldItems = `
+    SELECT 
+    COUNT()AS Total_unSold_items
+        FROM 
+    transactions
+    WHERE sold = 0;`;
+  } else {
+    const monthValue = format(new Date(selectedMonth), "MM");
+
+    totalSaleAmt = `
+    SELECT 
+    SUM(price) AS total_sale_amt
+    FROM transactions 
+    WHERE dateOfSale LIKE '%-${monthValue}-%' and sold = 1;`;
+
+    totalSoldItems = `
+    SELECT COUNT()AS Total_sold_items
+        FROM 
+    transactions 
         WHERE 
     dateOfSale LIKE '%-${monthValue}-%' 
         and 
     sold = 1;`;
-  const soldResponseResult = await database.all(total_sold_items);
-  statistics.push(soldResponseResult);
 
-  const total_unsold_items = `
+    totalUnsoldItems = `
     SELECT 
     COUNT()AS Total_unSold_items
         FROM 
-    ProductData
+    transactions
     WHERE dateOfSale LIKE '%-${monthValue}-%' and sold = 0;`;
-  const unSoldResponseResult = await database.all(total_unsold_items);
+  }
+  const saleResponseResult = await database.all(totalSaleAmt);
+  statistics.push(saleResponseResult);
+
+  const soldResponseResult = await database.all(totalSoldItems);
+  statistics.push(soldResponseResult);
+  const unSoldResponseResult = await database.all(totalUnsoldItems);
   statistics.push(unSoldResponseResult);
   return statistics.flat();
 };
 
 const getBarChartData = async (selectedMonth) => {
-  const monthValue = format(new Date(selectedMonth), "MM");
   const barChartData = [];
 
   const priceRange = [
@@ -288,31 +363,60 @@ const getBarChartData = async (selectedMonth) => {
   ];
 
   for (let range of priceRange) {
-    const total = await database.get(`SELECT 
+    let total;
+    if (selectedMonth === "") {
+      total = await database.get(`SELECT 
             COUNT() AS count
         FROM 
-        ProductData 
+        transactions 
+            WHERE 
+        price BETWEEN ${range.min} AND ${range.max};`);
+
+      barChartData.push({
+        priceRange: `${range.min}-${range.max}`,
+        totalItems: total.count,
+      });
+    } else {
+      const monthValue = format(new Date(selectedMonth), "MM");
+
+      total = await database.get(`SELECT 
+            COUNT() AS count
+        FROM 
+        transactions 
             WHERE 
         dateOfSale LIKE '%-${monthValue}-%' and price BETWEEN ${range.min} AND ${range.max};`);
 
-    barChartData.push({
-      priceRange: `${range.min}-${range.max}`,
-      totalItems: total.count,
-    });
+      barChartData.push({
+        priceRange: `${range.min}-${range.max}`,
+        totalItems: total.count,
+      });
+    }
   }
 
   return barChartData;
 };
 
 const getPieChartData = async (selectedMonth) => {
-  const monthValue = format(new Date(selectedMonth), "MM");
-  const pieChartData = await database.all(`
+  let pieChartData;
+  if (selectedMonth === "") {
+    pieChartData = await database.all(`
     SELECT 
     category,count(id) as items 
-    FROM ProductData 
+    FROM transactions 
+    GROUP BY category;
+  `);
+  } else {
+    const monthValue = format(new Date(selectedMonth), "MM");
+
+    pieChartData = await database.all(`
+    SELECT 
+    category,count(id) as items 
+    FROM transactions 
     WHERE dateOfSale LIKE '%-${monthValue}-%' 
     GROUP BY category;
   `);
+  }
+
   return pieChartData;
 };
 
@@ -321,55 +425,54 @@ app.get("/transactions", async (request, response) => {
     searchText = "",
     selectedMonth = "",
     limit = 10,
-    offset = 1,
+    offset = 0,
   } = request.query;
   const transactions = await getAllTransactions(
-    searchText,
-    selectedMonth,
     limit,
-    offset
+    offset,
+    searchText,
+    selectedMonth
   );
   response.send(transactions);
 });
 
 app.get("/statistics", async (request, response) => {
-  const { selectedMonth } = request.query;
+  const { selectedMonth = "" } = request.query;
   const statistics = await getStatistics(selectedMonth);
   response.send(statistics);
 });
 
 app.get("/bar-chart", async (request, response) => {
-  const { selectedMonth } = request.query;
+  const { selectedMonth = "" } = request.query;
   const barChartData = await getBarChartData(selectedMonth);
   response.send(barChartData);
 });
 
 app.get("/pie-chart", async (request, response) => {
-  const { selectedMonth } = request.query;
+  const { selectedMonth = "" } = request.query;
   const pieChartData = await getPieChartData(selectedMonth);
   response.send(pieChartData);
 });
 
-app.get("/combined-response", async (request, response) => {
+app.get("/combined-data", async (request, response) => {
   const {
     searchText = "",
     selectedMonth = "",
     limit = 10,
-    offset = 1,
-    productId = 0,
+    offset = 0,
+    deleteId = "",
   } = request.query;
   const combinedData = {
-    initializeDatabase: await getInitializedDatabase(),
     transactions: await getAllTransactions(
-      searchText,
-      selectedMonth,
       limit,
-      offset
+      offset,
+      searchText,
+      selectedMonth
     ),
     statistics: await getStatistics(selectedMonth),
     barChartData: await getBarChartData(selectedMonth),
     pieChartData: await getPieChartData(selectedMonth),
-    deleteProduct: await deleteProductData(productId),
+    deleteInformation: await deleteProductData(deleteId),
   };
   response.send(combinedData);
 });
